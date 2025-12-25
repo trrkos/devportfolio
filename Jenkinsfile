@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE                = 'trrkos1/devportfolio'
         REGISTRY_CREDENTIALS = 'docker-hub'
+        TRIVY_IMAGE          = 'aquasec/trivy:0.51.4'
     }
 
     options {
@@ -25,37 +26,44 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh "docker build -t ${env.IMAGE}:${env.IMAGE_TAG} -t ${env.IMAGE}:latest ."
+                sh '''
+                    docker build -t "$IMAGE:$IMAGE_TAG" -t "$IMAGE:latest" .
+                '''
             }
         }
 
         stage('Scan') {
             steps {
-                sh """
+                sh '''
                     set -eo pipefail
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
-                      aquasec/trivy:0.51.4 image \
+                      "$TRIVY_IMAGE" image \
                         --exit-code 1 \
                         --severity HIGH,CRITICAL \
                         --ignore-unfixed \
                         --no-progress \
                         --format table \
-                        ${env.IMAGE}:${env.IMAGE_TAG} | tee trivy-report.txt
-                """
+                        "$IMAGE:$IMAGE_TAG" | tee trivy-report.txt
+                '''
                 archiveArtifacts artifacts: 'trivy-report.txt', fingerprint: true
             }
         }
 
         stage('Push') {
             steps {
-                withCredentials([usernamePassword(credentialsId: REGISTRY_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh """
+                withCredentials([usernamePassword(
+                    credentialsId: REGISTRY_CREDENTIALS,
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )]) {
+                    sh '''
+                        set -e
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                        docker push ${env.IMAGE}:${env.IMAGE_TAG}
-                        docker push ${env.IMAGE}:latest
+                        docker push "$IMAGE:$IMAGE_TAG"
+                        docker push "$IMAGE:latest"
                         docker logout
-                    """
+                    '''
                 }
             }
         }
@@ -67,4 +75,3 @@ pipeline {
         }
     }
 }
-
