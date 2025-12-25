@@ -34,21 +34,16 @@ pipeline {
         stage('Scan') {
             steps {
                 sh '''
-                    set -e
+                    set -eo pipefail
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
-                      -v $PWD:/workspace \
-                      -w /workspace \
                       aquasec/trivy:0.51.4 image \
                         --exit-code 1 \
                         --severity HIGH,CRITICAL \
                         --ignore-unfixed \
                         --no-progress \
                         --format table \
-                        --output /workspace/trivy-report.txt \
-                        $IMAGE:$TAG
-
-                    cat trivy-report.txt
+                        $IMAGE:$TAG | tee trivy-report.txt
                 '''
                 archiveArtifacts artifacts: 'trivy-report.txt', fingerprint: true
             }
