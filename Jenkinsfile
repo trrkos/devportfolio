@@ -51,11 +51,13 @@ pipeline {
 
         stage('Push') {
             steps {
-                script {
-                    docker.withRegistry('', REGISTRY_CREDENTIALS) {
-                        sh 'docker push $IMAGE:$TAG'
-                        sh 'docker push $IMAGE:latest'
-                    }
+                withCredentials([usernamePassword(credentialsId: REGISTRY_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh '''
+                        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+                        docker push $IMAGE:$TAG
+                        docker push $IMAGE:latest
+                        docker logout
+                    '''
                 }
             }
         }
