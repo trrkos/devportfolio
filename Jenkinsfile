@@ -9,6 +9,7 @@ pipeline {
 
     options {
         timestamps()
+        skipDefaultCheckout(true)
     }
 
     stages {
@@ -16,10 +17,7 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    def shortSha = env.GIT_COMMIT?.take(8)
-                    if (!shortSha?.trim()) {
-                        shortSha = sh(script: 'git rev-parse --short=8 HEAD', returnStdout: true).trim()
-                    }
+                    def shortSha = sh(script: 'git rev-parse --short=8 HEAD', returnStdout: true).trim()
                     env.TAG = "${env.BUILD_NUMBER}-${shortSha}"
                 }
             }
@@ -53,7 +51,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: REGISTRY_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh '''
-                        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         docker push $IMAGE:$TAG
                         docker push $IMAGE:latest
                         docker logout
