@@ -1,0 +1,11 @@
+node_modules
+dist
+.astro
+.git
+.gitignore
+Dockerfile
+Jenkinsfile
+README.md
+npm-debug.log
+.DS_Store
+
